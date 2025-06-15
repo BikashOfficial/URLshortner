@@ -72,12 +72,10 @@ export const createShortUrl = async (req, res) => {
           createdAt: newUrl.createdAt
         }
       });
-    } else {
-      // Return simple response for non-authenticated users
-      // Just return the short URL path, let frontend construct the full URL
+    } else {      // Return simple response for non-authenticated users
       res.json({
         success: true,
-        shortUrl: `/${newUrl.short_url}`
+        shortUrl: `${process.env.APP_URL || 'http://localhost:5000'}/${newUrl.short_url}`
       });
     }
   } catch (error) {
