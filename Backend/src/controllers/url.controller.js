@@ -60,11 +60,7 @@ export const createShortUrl = async (req, res) => {
     // If user is authenticated, add URL to their urls array
     if (req.user) {
       await req.user.updateOne({ $push: { urls: newUrl._id } });
-    }
-
-    const fullShortUrl = `${process.env.APP_URL}${newUrl.short_url}`;
-    
-    if (req.user) {
+    }    if (req.user) {
       // Return full object for authenticated users
       res.json({
         success: true,
@@ -78,9 +74,10 @@ export const createShortUrl = async (req, res) => {
       });
     } else {
       // Return simple response for non-authenticated users
+      // Just return the short URL path, let frontend construct the full URL
       res.json({
         success: true,
-        shortUrl: fullShortUrl
+        shortUrl: `/${newUrl.short_url}`
       });
     }
   } catch (error) {

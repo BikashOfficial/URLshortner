@@ -26,8 +26,12 @@ const Home = () => {
     }    try {
       setLoading(true);
       const response = await urlService.shortenUrl(url);
-      if (response.success && response.shortUrl) {
-        setShortUrl(response.shortUrl);
+      if (response.success) {
+        // Handle both authenticated and non-authenticated responses
+        const finalUrl = response.url ? 
+          `${import.meta.env.VITE_BACKEND_URL}/${response.url.short_url}` : 
+          response.shortUrl;
+        setShortUrl(finalUrl);
         toast.success('URL shortened successfully!');
       } else {
         toast.error('Error: Invalid response from server');
