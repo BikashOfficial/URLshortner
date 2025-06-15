@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 
@@ -11,21 +11,15 @@ export const UrlAuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  // Check auth status on mount and token change
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!user && token) {
-      checkAuthStatus();
-    } else if (!token) {
-      setLoading(false);
-    }
-  }, [user]);
-  const checkAuthStatus = async () => {
+  const location = useLocation();
+
+  const checkAuthStatus = useCallback(async () => {
     try {
+      setLoading(true);
       const token = localStorage.getItem('token');
       if (!token) {
-        setLoading(false);
-        return;
+        setUser(null);
+        return false;
       }
 
       const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/auth/profile`, {
@@ -34,16 +28,30 @@ export const UrlAuthProvider = ({ children }) => {
       
       if (response.data.success) {
         setUser(response.data.user);
+        return true;
       } else {
+        setUser(null);
         localStorage.removeItem('token');
+        return false;
       }
     } catch (error) {
       console.error('Auth check failed:', error);
+      setUser(null);
       localStorage.removeItem('token');
+      return false;
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      checkAuthStatus();
+    } else {
+      setLoading(false);
+    }
+  }, [checkAuthStatus]);
 
   const login = async (credentials) => {
     try {
@@ -55,7 +63,11 @@ export const UrlAuthProvider = ({ children }) => {
         localStorage.setItem('token', token);
         setUser(user);
         toast.success('Login successful!');
-        navigate('/dashboard');
+        
+        // Handle redirect after login
+        const params = new URLSearchParams(location.search);
+        const returnTo = params.get('returnTo');
+        navigate(returnTo ? decodeURIComponent(returnTo) : '/dashboard');
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Login failed');
@@ -92,7 +104,14 @@ export const UrlAuthProvider = ({ children }) => {
   }
 
   return (
-    <UrlAuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <UrlAuthContext.Provider value={{ 
+      user, 
+      loading, 
+      login, 
+      register, 
+      logout,
+      checkAuthStatus 
+    }}>
       {children}
     </UrlAuthContext.Provider>
   );
