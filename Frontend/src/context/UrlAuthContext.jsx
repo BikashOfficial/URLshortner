@@ -11,29 +11,38 @@ export const UrlAuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-
-  // Check auth status on mount
+  // Check auth status on mount and token change
   useEffect(() => {
-    checkAuthStatus();
-  }, []);
-
-  const checkAuthStatus = async () => {
     const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/auth/profile`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (response.data.success) {
-          setUser(response.data.user);
-        } else {
-          localStorage.removeItem('token');
-        }
-      } catch (error) {
+    if (!user && token) {
+      checkAuthStatus();
+    } else if (!token) {
+      setLoading(false);
+    }
+  }, [user]);
+  const checkAuthStatus = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
+      const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/auth/profile`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (response.data.success) {
+        setUser(response.data.user);
+      } else {
         localStorage.removeItem('token');
       }
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      localStorage.removeItem('token');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const login = async (credentials) => {
